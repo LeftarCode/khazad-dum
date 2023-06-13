@@ -17,9 +17,8 @@ nlohmann::json CryptKey::serialize() {
     xstream << std::setw(2) << std::setfill('0') << std::hex
             << +static_cast<unsigned char>(byte);
   }
-  xstream.
 
-      for (auto byte : y) {
+  for (auto byte : y) {
     ystream << std::setw(2) << std::setfill('0') << std::hex
             << +static_cast<unsigned char>(byte);
   }
