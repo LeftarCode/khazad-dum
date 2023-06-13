@@ -9,6 +9,7 @@ namespace Moria {
 class TPM2_HAL {
  private:
   ESYS_CONTEXT *ctx;
+  ESYS_TR session = ESYS_TR_NONE;
 
  public:
   TPM2_HAL();
