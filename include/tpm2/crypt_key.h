@@ -3,6 +3,7 @@
 
 #include <array>
 #include <cstddef>
+#include <nlohmann/json.hpp>
 
 namespace Moria {
 enum KeyType { kEllipticCurve, kRSA, kAES };
@@ -17,6 +18,7 @@ class CryptKey {
   CryptKey(std::array<std::byte, 32> x, std::array<std::byte, 32> y);
   std::array<std::byte, 32> getX();
   std::array<std::byte, 32> getY();
+  nlohmann::json serialize();
 };
 
 };  // namespace Moria

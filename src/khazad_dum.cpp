@@ -7,6 +7,8 @@ int main() {
   Moria::TPM2_HAL* tpm2hall = new Moria::TPM2_HAL;
   auto pKey = tpm2hall->createPrimaryKey();
 
-  UNUSED(pKey);
+  nlohmann::json object = {{"ecc_public_key", pKey->serialize()}};
+  std::cout << object.dump(2) << std::endl;
+
   return 0;
 }

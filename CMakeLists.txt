@@ -2,6 +2,7 @@ cmake_minimum_required (VERSION 3.8)
 
 project ("khazad_dum")
 
+
 add_executable (khazad_dum 
     "src/khazad_dum.cpp"
     "src/tpm2/crypt_key.cpp"
@@ -21,3 +22,5 @@ target_link_libraries(khazad_dum
     tss2-esys
     nlohmann_json::nlohmann_json
 )
+
+target_compile_features(khazad_dum PRIVATE cxx_std_17)
