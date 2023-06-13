@@ -6,3 +6,14 @@
 Khazad-dûm is a powerful library inspired by the legendary city of Middle-earth. It provides unrivaled protection for your application secrets, just as Mithril, the precious metal of great value and strength.
 
 With Khazad-dûm, you can confidently manage and store your secrets, ensuring their utmost confidentiality and integrity. Leveraging the TPM2 module, this library offers a robust and tamper-resistant environment for secure secret storage and retrieval.
+
+## Build
+- Generate project
+```
+cmake -S . -B build
+```
+- Build project
+```
+cmake --build build --config Release
+cmake --build build --config Debug
+```
