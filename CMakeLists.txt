@@ -5,11 +5,19 @@ project ("khazad_dum")
 add_executable (khazad_dum 
     "src/khazad_dum.cpp"
     "src/tpm2/crypt_key.cpp"
-    "src/tpm2/tpm2_hal.cpp")
+    "src/tpm2/tpm2_hal.cpp"
+)
 
-include_directories("include")
-include_directories("/usr/include/tss")
+include_directories (
+    "include"
+    "/usr/include/tss"
+)
 
-TARGET_LINK_LIBRARIES(khazad_dum
+add_subdirectory(
+    libs/ext/json
+)
+
+target_link_libraries(khazad_dum
     tss2-esys
+    nlohmann_json::nlohmann_json
 )
