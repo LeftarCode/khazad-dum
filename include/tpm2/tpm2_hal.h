@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "./crypt_key.h"
+#include "./primary_object.h"
 
 namespace Moria {
 class TPM2_HAL {
@@ -13,7 +14,10 @@ class TPM2_HAL {
 
  public:
   TPM2_HAL();
-  std::unique_ptr<CryptKey> createPrimaryKey();
+  std::unique_ptr<PrimaryObject> createPrimaryObject();
+  std::unique_ptr<CryptKey> createKey(
+      std::unique_ptr<PrimaryObject> pPrimaryObject);
+  std::vector<std::byte> encrypt(std::unique_ptr<PrimaryObject> pKey);
 };
 
 };  // namespace Moria

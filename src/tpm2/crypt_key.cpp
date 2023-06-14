@@ -5,8 +5,9 @@
 #include <sstream>
 
 namespace Moria {
-CryptKey::CryptKey(std::array<std::byte, 32> x, std::array<std::byte, 32> y)
-    : x(x), y(y) {}
+CryptKey::CryptKey(ESYS_TR handle, std::array<std::byte, 32> x,
+                   std::array<std::byte, 32> y)
+    : x(x), y(y), handle(handle) {}
 std::array<std::byte, 32> CryptKey::getX() { return x; }
 std::array<std::byte, 32> CryptKey::getY() { return y; }
 
@@ -30,4 +31,6 @@ nlohmann::json CryptKey::serialize() {
 
   return keyJSON;
 }
+
+ESYS_TR CryptKey::getHandle() { return handle; }
 };  // namespace Moria
