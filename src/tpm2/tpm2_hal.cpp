@@ -31,10 +31,10 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
   TSS2_RC r;
   ESYS_TR primaryHandle = ESYS_TR_NONE;
 
-  TPM2B_PUBLIC *outPublic = NULL;
-  TPM2B_CREATION_DATA *creationData = NULL;
-  TPM2B_DIGEST *creationHash = NULL;
-  TPMT_TK_CREATION *creationTicket = NULL;
+  TPM2B_PUBLIC *outPublic = nullptr;
+  TPM2B_CREATION_DATA *creationData = nullptr;
+  TPM2B_DIGEST *creationHash = nullptr;
+  TPMT_TK_CREATION *creationTicket = nullptr;
 
   TPM2B_AUTH authValuePrimary = {.size = 5, .buffer = {1, 2, 3, 4, 5}};
 
@@ -70,15 +70,15 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
 
   TPM2B_AUTH authValue = {.size = 0, .buffer = {}};
 
-  r = Esys_TR_SetAuth(ctx, ESYS_TR_RH_OWNER, &authValue);
+  r = Esys_TR_SetAuth(ctx, ESYS_TR_RH_ENDORSEMENT, &authValue);
   if (r != TSS2_RC_SUCCESS) {
-    throw TPM2Exception("Could not authorize to ESYS_TR_RH_OWNER.");
+    throw TPM2Exception("Could not authorize to ESYS_TR_RH_ENDORSEMENT.");
   }
 
-  r = Esys_CreatePrimary(ctx, ESYS_TR_RH_OWNER, ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                         ESYS_TR_NONE, &inSensitivePrimary, &inPublic,
-                         &outsideInfo, &creationPCR, &primaryHandle, &outPublic,
-                         NULL, NULL, NULL);
+  r = Esys_CreatePrimary(ctx, ESYS_TR_RH_ENDORSEMENT, ESYS_TR_PASSWORD,
+                         ESYS_TR_NONE, ESYS_TR_NONE, &inSensitivePrimary,
+                         &inPublic, &outsideInfo, &creationPCR, &primaryHandle,
+                         &outPublic, nullptr, nullptr, nullptr);
   if (r != TSS2_RC_SUCCESS) {
     throw TPM2Exception("Could not create primary object.");
   }
@@ -92,11 +92,11 @@ std::unique_ptr<CryptKey> TPM2_HAL::createKey(
     std::unique_ptr<PrimaryObject> pPrimaryObject) {
   TSS2_RC r;
 
-  TPM2B_PUBLIC *outPublic2 = NULL;
-  TPM2B_PRIVATE *outPrivate2 = NULL;
-  TPM2B_CREATION_DATA *creationData2 = NULL;
-  TPM2B_DIGEST *creationHash2 = NULL;
-  TPMT_TK_CREATION *creationTicket2 = NULL;
+  TPM2B_PUBLIC *outPublic = nullptr;
+  TPM2B_PRIVATE *outPrivate = nullptr;
+  TPM2B_CREATION_DATA *creationData = nullptr;
+  TPM2B_DIGEST *creationHash = nullptr;
+  TPMT_TK_CREATION *creationTicket = nullptr;
 
   TPM2B_AUTH authValuePrimary = {.size = 5, .buffer = {1, 2, 3, 4, 5}};
 
@@ -105,66 +105,82 @@ std::unique_ptr<CryptKey> TPM2_HAL::createKey(
     throw TPM2Exception("Could not authorize to provided primary object.");
   }
 
-  TPM2B_AUTH authKey2 = {.size = 6, .buffer = {6, 7, 8, 9, 10, 11}};
+  TPM2B_AUTH authKey = {.size = 6, .buffer = {6, 7, 8, 9, 10, 11}};
 
-  TPM2B_SENSITIVE_CREATE inSensitive2 = {
+  TPM2B_SENSITIVE_CREATE inSensitive = {
       .size = 0,
       .sensitive = {.userAuth = {.size = 0, .buffer = {0}},
                     .data = {.size = 0, .buffer = {}}}};
 
-  inSensitive2.sensitive.userAuth = authKey2;
+  inSensitive.sensitive.userAuth = authKey;
 
-  TPM2B_PUBLIC inPublic2 = kPrimaryDefaultEcc;
-  TPM2B_DATA outsideInfo2 = {
+  TPM2B_PUBLIC inPublic = kPrimaryDefaultRSA;
+  TPM2B_DATA outsideInfo = {
       .size = 0,
       .buffer = {},
   };
 
-  TPML_PCR_SELECTION creationPCR2 = {
+  TPML_PCR_SELECTION creationPCR = {
       .count = 0,
   };
 
   r = Esys_Create(ctx, pPrimaryObject->getHandle(), ESYS_TR_PASSWORD,
-                  ESYS_TR_NONE, ESYS_TR_NONE, &inSensitive2, &inPublic2,
-                  &outsideInfo2, &creationPCR2, &outPrivate2, &outPublic2,
-                  &creationData2, &creationHash2, &creationTicket2);
+                  ESYS_TR_NONE, ESYS_TR_NONE, &inSensitive, &inPublic,
+                  &outsideInfo, &creationPCR, &outPrivate, &outPublic, nullptr,
+                  nullptr, nullptr);
   if (r != TSS2_RC_SUCCESS) {
-    throw TPM2Exception("Cloud not create key.");
+    throw TPM2Exception("Could not create key.");
   }
 
-  std::array<std::byte, 32> x;
-  std::array<std::byte, 32> y;
-  memcpy(std::begin(x), outPublic2->publicArea.unique.ecc.x.buffer, 32);
-  memcpy(std::begin(y), outPublic2->publicArea.unique.ecc.y.buffer, 32);
-  return std::make_unique<CryptKey>(1, x, y);
+  std::array<std::byte, 256> publicKey;
+  std::array<std::byte, 228> ecnryptedPrivateKey;
+  memcpy(std::begin(publicKey), outPublic->publicArea.unique.rsa.buffer, 256);
+  memcpy(std::begin(ecnryptedPrivateKey), outPrivate->buffer, 228);
+  return std::make_unique<CryptKey>(pPrimaryObject->getHandle(), publicKey,
+                                    ecnryptedPrivateKey);
 };
 
-std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<PrimaryObject> pKey) {
+std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<CryptKey> pKey) {
   TSS2_RC r;
-  TPM2B_MAX_BUFFER *outData = NULL;
-  TPM2B_IV *ivOut = NULL;
+  TPM2B_MAX_BUFFER *outData = nullptr;
 
-  TPM2B_IV ivIn = {.size = 16,
-                   .buffer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16}};
-
+  TPM2B_AUTH authKey = {.size = 6, .buffer = {6, 7, 8, 9, 10, 11}};
   TPM2B_MAX_BUFFER inData = {
-      .size = 16, .buffer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16}};
+      .size = 32,
+      .buffer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
 
-  TPMI_YES_NO decrypt = TPM2_YES;
   TPMI_YES_NO encrypt = TPM2_NO;
   TPMI_ALG_CIPHER_MODE mode = TPM2_ALG_NULL;
 
-  TPM2B_PUBLIC inPublicECC = kPrimaryDefaultEcc;
+  TPM2B_PUBLIC inPublicECC = kPrimaryDefaultRSA;
+  inPublicECC.publicArea.unique.rsa.size = pKey->getPublicKey().size();
+  memcpy(inPublicECC.publicArea.unique.rsa.buffer,
+         std::begin(pKey->getPublicKey()), pKey->getPublicKey().size());
+  TPM2B_PRIVATE inPrivateRSA;
+  inPrivateRSA.size = pKey->getEncryptedPrivateKey().size();
+  memcpy(inPrivateRSA.buffer, std::begin(pKey->getEncryptedPrivateKey()),
+         pKey->getEncryptedPrivateKey().size());
 
   ESYS_TR loadedKeyHandle = ESYS_TR_NONE;
-  r = Esys_Load(ctx, pKey->getHandle(), ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                ESYS_TR_NONE, NULL, &inPublicECC, &loadedKeyHandle);
+  r = Esys_Load(ctx, pKey->getParentHandle(), ESYS_TR_PASSWORD, ESYS_TR_NONE,
+                ESYS_TR_NONE, &inPrivateRSA, &inPublicECC, &loadedKeyHandle);
   if (r != TSS2_RC_SUCCESS) {
     throw TPM2Exception("Could not load provided key");
   }
-  // r = Esys_EncryptDecrypt(ctx, pKey->getHandle(), ESYS_TR_PASSWORD,
-  //                         ESYS_TR_NONE, ESYS_TR_NONE, encrypt, mode, &ivIn,
-  //                         &inData, &outData, &ivOut);
+
+  r = Esys_TR_SetAuth(ctx, loadedKeyHandle, &authKey);
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not authorize to provided key.");
+  }
+
+  r = Esys_EncryptDecrypt2(ctx, loadedKeyHandle, ESYS_TR_PASSWORD, ESYS_TR_NONE,
+                           ESYS_TR_NONE, &inData, encrypt, mode, nullptr,
+                           &outData, nullptr);
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not encrypt data with provided key");
+  }
+
   return std::vector<std::byte>();
 }
 };  // namespace Moria

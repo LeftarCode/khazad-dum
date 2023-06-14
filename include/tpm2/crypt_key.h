@@ -11,16 +11,17 @@ enum KeyType { kEllipticCurve, kRSA, kAES };
 class CryptKey {
  private:
   KeyType type;
-  ESYS_TR handle;
-  std::array<std::byte, 32> x, y;
+  ESYS_TR parentHandle;
+  std::array<std::byte, 256> publicKey;
+  std::array<std::byte, 228> ecnryptedPrivateKey;
 
  public:
-  CryptKey(ESYS_TR handle, std::array<std::byte, 32> x,
-           std::array<std::byte, 32> y);
-  std::array<std::byte, 32> getX();
-  std::array<std::byte, 32> getY();
+  CryptKey(ESYS_TR parentHandle, std::array<std::byte, 256> publicKey,
+           std::array<std::byte, 228> ecnryptedPrivateKey);
+  std::array<std::byte, 256> getPublicKey();
+  std::array<std::byte, 228> getEncryptedPrivateKey();
   nlohmann::json serialize();
-  ESYS_TR getHandle();
+  ESYS_TR getParentHandle();
 };
 
 };  // namespace Moria

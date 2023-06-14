@@ -17,7 +17,7 @@ class TPM2_HAL {
   std::unique_ptr<PrimaryObject> createPrimaryObject();
   std::unique_ptr<CryptKey> createKey(
       std::unique_ptr<PrimaryObject> pPrimaryObject);
-  std::vector<std::byte> encrypt(std::unique_ptr<PrimaryObject> pKey);
+  std::vector<std::byte> encrypt(std::unique_ptr<CryptKey> pKey);
 };
 
 };  // namespace Moria

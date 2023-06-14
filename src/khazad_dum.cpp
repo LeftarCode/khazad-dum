@@ -12,10 +12,9 @@ int main() {
 
   auto pKey = tpm2hall->createKey(std::move(pPrimaryObject));
 
-  nlohmann::json object1 = {{"ecc_key", pKey->serialize()}};
+  nlohmann::json object1 = {{"rsa_key", pKey->serialize()}};
   std::cout << object1.dump(2) << std::endl;
-  // auto pKey = tpm2hall->createKey(std::move(pPrimaryObject));
 
-  // auto data = tpm2hall->encrypt(std::move(pPrimaryObject));
+  auto data = tpm2hall->encrypt(std::move(pKey));
   return 0;
 }
