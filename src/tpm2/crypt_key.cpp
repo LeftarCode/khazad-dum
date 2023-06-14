@@ -28,10 +28,8 @@ nlohmann::json CryptKey::serialize() {
                << +static_cast<unsigned char>(byte);
   }
 
-  nlohmann::json keyJSON = {
-      {"public", pubstream.str()}, {"encryptedPrivateKey", privstream.str()}
-
-  };
+  nlohmann::json keyJSON = {{"public", pubstream.str()},
+                            {"encryptedPrivateKey", privstream.str()}};
 
   return keyJSON;
 }

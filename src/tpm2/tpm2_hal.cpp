@@ -145,17 +145,10 @@ std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<CryptKey> pKey) {
   TPM2B_MAX_BUFFER *outData = nullptr;
 
   TPM2B_AUTH authKey = {.size = 6, .buffer = {6, 7, 8, 9, 10, 11}};
-  TPM2B_MAX_BUFFER inData = {
-      .size = 32,
-      .buffer = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
-                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}};
 
-  TPMI_YES_NO encrypt = TPM2_NO;
-  TPMI_ALG_CIPHER_MODE mode = TPM2_ALG_NULL;
-
-  TPM2B_PUBLIC inPublicECC = kPrimaryDefaultRSA;
-  inPublicECC.publicArea.unique.rsa.size = pKey->getPublicKey().size();
-  memcpy(inPublicECC.publicArea.unique.rsa.buffer,
+  TPM2B_PUBLIC inPublic = kPrimaryDefaultRSA;
+  inPublic.publicArea.unique.rsa.size = pKey->getPublicKey().size();
+  memcpy(inPublic.publicArea.unique.rsa.buffer,
          std::begin(pKey->getPublicKey()), pKey->getPublicKey().size());
   TPM2B_PRIVATE inPrivateRSA;
   inPrivateRSA.size = pKey->getEncryptedPrivateKey().size();
@@ -164,7 +157,7 @@ std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<CryptKey> pKey) {
 
   ESYS_TR loadedKeyHandle = ESYS_TR_NONE;
   r = Esys_Load(ctx, pKey->getParentHandle(), ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                ESYS_TR_NONE, &inPrivateRSA, &inPublicECC, &loadedKeyHandle);
+                ESYS_TR_NONE, &inPrivateRSA, &inPublic, &loadedKeyHandle);
   if (r != TSS2_RC_SUCCESS) {
     throw TPM2Exception("Could not load provided key");
   }
@@ -174,13 +167,22 @@ std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<CryptKey> pKey) {
     throw TPM2Exception("Could not authorize to provided key.");
   }
 
-  r = Esys_EncryptDecrypt2(ctx, loadedKeyHandle, ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                           ESYS_TR_NONE, &inData, encrypt, mode, nullptr,
-                           &outData, nullptr);
+  TPM2B_DATA *null_data = NULL;
+  TPM2B_PUBLIC_KEY_RSA plain = {.size = 3, .buffer = {1, 2, 3}};
+  TPM2B_PUBLIC_KEY_RSA *cipher = NULL;
+
+  TPMT_RSA_DECRYPT scheme;
+  scheme.scheme = TPM2_ALG_NULL;
+
+  r = Esys_RSA_Encrypt(ctx, loadedKeyHandle, ESYS_TR_NONE, ESYS_TR_NONE,
+                       ESYS_TR_NONE, &plain, &scheme, null_data, &cipher);
   if (r != TSS2_RC_SUCCESS) {
     throw TPM2Exception("Could not encrypt data with provided key");
   }
 
-  return std::vector<std::byte>();
+  std::vector<std::byte> ciphertext;
+  ciphertext.resize(cipher->size);
+  memcpy(ciphertext.data(), cipher->buffer, cipher->size);
+  return ciphertext;
 }
 };  // namespace Moria

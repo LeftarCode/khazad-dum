@@ -16,5 +16,11 @@ int main() {
   std::cout << object1.dump(2) << std::endl;
 
   auto data = tpm2hall->encrypt(std::move(pKey));
+  printf("Ciphertext: ");
+  for (auto byte : data) {
+    printf("%x", byte);
+  }
+  printf("\n");
+
   return 0;
 }
