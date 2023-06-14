@@ -9,7 +9,7 @@
 namespace Moria {
 class TPM2_HAL {
  private:
-  ESYS_CONTEXT *ctx;
+  ESYS_CONTEXT* ctx;
   ESYS_TR session = ESYS_TR_NONE;
 
  public:
@@ -17,7 +17,9 @@ class TPM2_HAL {
   std::unique_ptr<PrimaryObject> createPrimaryObject();
   std::unique_ptr<CryptKey> createKey(
       std::unique_ptr<PrimaryObject> pPrimaryObject);
-  std::vector<std::byte> encrypt(std::unique_ptr<CryptKey> pKey);
+  std::vector<std::byte> encrypt(const std::unique_ptr<CryptKey>& pKey);
+  std::vector<std::byte> decrypt(const std::unique_ptr<CryptKey>& pKey,
+                                 const std::vector<std::byte>& ciphertext);
 };
 
 };  // namespace Moria

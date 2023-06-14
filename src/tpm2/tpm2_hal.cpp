@@ -83,6 +83,11 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
     throw TPM2Exception("Could not create primary object.");
   }
 
+  Esys_Free(outPublic);
+  Esys_Free(creationData);
+  Esys_Free(creationHash);
+  Esys_Free(creationTicket);
+
   std::array<std::byte, 256> key;
   memcpy(std::begin(key), outPublic->publicArea.unique.rsa.buffer, 256);
   return std::make_unique<PrimaryObject>(primaryHandle, key);
@@ -132,6 +137,11 @@ std::unique_ptr<CryptKey> TPM2_HAL::createKey(
     throw TPM2Exception("Could not create key.");
   }
 
+  Esys_Free(outPublic);
+  Esys_Free(creationData);
+  Esys_Free(creationHash);
+  Esys_Free(creationTicket);
+
   std::array<std::byte, 256> publicKey;
   std::array<std::byte, 228> ecnryptedPrivateKey;
   memcpy(std::begin(publicKey), outPublic->publicArea.unique.rsa.buffer, 256);
@@ -140,7 +150,8 @@ std::unique_ptr<CryptKey> TPM2_HAL::createKey(
                                     ecnryptedPrivateKey);
 };
 
-std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<CryptKey> pKey) {
+std::vector<std::byte> TPM2_HAL::encrypt(
+    const std::unique_ptr<CryptKey> &pKey) {
   TSS2_RC r;
   TPM2B_MAX_BUFFER *outData = nullptr;
 
@@ -167,9 +178,10 @@ std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<CryptKey> pKey) {
     throw TPM2Exception("Could not authorize to provided key.");
   }
 
-  TPM2B_DATA *null_data = NULL;
   TPM2B_PUBLIC_KEY_RSA plain = {.size = 3, .buffer = {1, 2, 3}};
   TPM2B_PUBLIC_KEY_RSA *cipher = NULL;
+  TPM2B_PUBLIC_KEY_RSA *plain2 = NULL;
+  TPM2B_DATA *null_data = NULL;
 
   TPMT_RSA_DECRYPT scheme;
   scheme.scheme = TPM2_ALG_NULL;
@@ -180,9 +192,67 @@ std::vector<std::byte> TPM2_HAL::encrypt(std::unique_ptr<CryptKey> pKey) {
     throw TPM2Exception("Could not encrypt data with provided key");
   }
 
+  Esys_Free(null_data);
+
+  r = Esys_RSA_Decrypt(ctx, loadedKeyHandle, ESYS_TR_PASSWORD, ESYS_TR_NONE,
+                       ESYS_TR_NONE, cipher, &scheme, null_data, &plain2);
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not decrypt data with provided key");
+  }
+
   std::vector<std::byte> ciphertext;
   ciphertext.resize(cipher->size);
   memcpy(ciphertext.data(), cipher->buffer, cipher->size);
   return ciphertext;
+}
+
+std::vector<std::byte> TPM2_HAL::decrypt(
+    const std::unique_ptr<CryptKey> &pKey,
+    const std::vector<std::byte> &ciphertext) {
+  TSS2_RC r;
+  TPM2B_MAX_BUFFER *outData = nullptr;
+
+  TPM2B_AUTH authKey = {.size = 6, .buffer = {6, 7, 8, 9, 10, 11}};
+
+  TPM2B_PUBLIC inPublic = kPrimaryDefaultRSA;
+  inPublic.publicArea.unique.rsa.size = pKey->getPublicKey().size();
+  memcpy(inPublic.publicArea.unique.rsa.buffer,
+         std::begin(pKey->getPublicKey()), pKey->getPublicKey().size());
+  TPM2B_PRIVATE inPrivateRSA;
+  inPrivateRSA.size = pKey->getEncryptedPrivateKey().size();
+  memcpy(inPrivateRSA.buffer, std::begin(pKey->getEncryptedPrivateKey()),
+         pKey->getEncryptedPrivateKey().size());
+
+  ESYS_TR loadedKeyHandle = ESYS_TR_NONE;
+  r = Esys_Load(ctx, pKey->getParentHandle(), ESYS_TR_PASSWORD, ESYS_TR_NONE,
+                ESYS_TR_NONE, &inPrivateRSA, &inPublic, &loadedKeyHandle);
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not load provided key");
+  }
+
+  r = Esys_TR_SetAuth(ctx, loadedKeyHandle, &authKey);
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not authorize to provided key.");
+  }
+
+  TPM2B_DATA *null_data = nullptr;
+  TPM2B_PUBLIC_KEY_RSA *plain = nullptr;
+  TPM2B_PUBLIC_KEY_RSA cipher;
+  cipher.size = ciphertext.size();
+  memcpy(cipher.buffer, ciphertext.data(), ciphertext.size());
+
+  TPMT_RSA_DECRYPT scheme;
+  scheme.scheme = TPM2_ALG_NULL;
+
+  r = Esys_RSA_Decrypt(ctx, loadedKeyHandle, ESYS_TR_PASSWORD, ESYS_TR_NONE,
+                       ESYS_TR_NONE, &cipher, &scheme, null_data, &plain);
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not decrypt data with provided key");
+  }
+
+  std::vector<std::byte> plaintext;
+  plaintext.resize(plain->size);
+  memcpy(plaintext.data(), plain->buffer, plain->size);
+  return plaintext;
 }
 };  // namespace Moria

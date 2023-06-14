@@ -15,12 +15,19 @@ int main() {
   nlohmann::json object1 = {{"rsa_key", pKey->serialize()}};
   std::cout << object1.dump(2) << std::endl;
 
-  auto data = tpm2hall->encrypt(std::move(pKey));
+  auto data = tpm2hall->encrypt(pKey);
   printf("Ciphertext: ");
   for (auto byte : data) {
     printf("%x", byte);
   }
   printf("\n");
+
+  // auto pdata = tpm2hall->decrypt(pKey, data);
+  //  printf("Plaintext: ");
+  //  for (auto byte : pdata) {
+  //    printf("%x", byte);
+  //  }
+  //  printf("\n");
 
   return 0;
 }
