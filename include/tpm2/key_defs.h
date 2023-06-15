@@ -60,4 +60,33 @@ const TPM2B_PUBLIC kPrimaryDefaultRSA = {
         },
 };
 
+const TPM2B_PUBLIC kKeyDefaultRSA = {
+    .size = 0,
+    .publicArea =
+        {
+            .type = TPM2_ALG_RSA,
+            .nameAlg = TPM2_ALG_SHA256,
+            .objectAttributes =
+                (TPMA_OBJECT_USERWITHAUTH | TPMA_OBJECT_DECRYPT |
+                 TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT |
+                 TPMA_OBJECT_SENSITIVEDATAORIGIN),
+            .authPolicy =
+                {
+                    .size = 0,
+                },
+            .parameters = {.rsaDetail =
+                               {
+                                   .symmetric = {.algorithm = TPM2_ALG_NULL},
+                                   .scheme = {.scheme = TPM2_ALG_RSAES},
+                                   .keyBits = 2048,
+                                   .exponent = 0,
+                               }},
+            .unique = {.rsa =
+                           {
+                               .size = 0,
+                               .buffer = {},
+                           }},
+        },
+};
+
 };  // namespace Moria

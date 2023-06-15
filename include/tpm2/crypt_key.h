@@ -13,13 +13,13 @@ class CryptKey {
   KeyType type;
   ESYS_TR parentHandle;
   std::array<std::byte, 256> publicKey;
-  std::array<std::byte, 228> ecnryptedPrivateKey;
+  std::array<std::byte, 196> ecnryptedPrivateKey;
 
  public:
   CryptKey(ESYS_TR parentHandle, std::array<std::byte, 256> publicKey,
-           std::array<std::byte, 228> ecnryptedPrivateKey);
+           std::array<std::byte, 196> ecnryptedPrivateKey);
   std::array<std::byte, 256> getPublicKey();
-  std::array<std::byte, 228> getEncryptedPrivateKey();
+  std::array<std::byte, 196> getEncryptedPrivateKey();
   nlohmann::json serialize();
   ESYS_TR getParentHandle();
 };

@@ -6,12 +6,12 @@
 
 namespace Moria {
 CryptKey::CryptKey(ESYS_TR parentHandle, std::array<std::byte, 256> publicKey,
-                   std::array<std::byte, 228> ecnryptedPrivateKey)
+                   std::array<std::byte, 196> ecnryptedPrivateKey)
     : publicKey(publicKey),
       ecnryptedPrivateKey(ecnryptedPrivateKey),
       parentHandle(parentHandle) {}
 std::array<std::byte, 256> CryptKey::getPublicKey() { return publicKey; }
-std::array<std::byte, 228> CryptKey::getEncryptedPrivateKey() {
+std::array<std::byte, 196> CryptKey::getEncryptedPrivateKey() {
   return ecnryptedPrivateKey;
 }
 

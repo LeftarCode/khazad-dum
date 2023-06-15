@@ -11,7 +11,6 @@ int main() {
   std::cout << object.dump(2) << std::endl;
 
   auto pKey = tpm2hall->createKey(std::move(pPrimaryObject));
-
   nlohmann::json object1 = {{"rsa_key", pKey->serialize()}};
   std::cout << object1.dump(2) << std::endl;
 
@@ -22,12 +21,12 @@ int main() {
   }
   printf("\n");
 
-  // auto pdata = tpm2hall->decrypt(pKey, data);
-  //  printf("Plaintext: ");
-  //  for (auto byte : pdata) {
-  //    printf("%x", byte);
-  //  }
-  //  printf("\n");
+  auto pdata = tpm2hall->decrypt(pKey, data);
+  printf("Plaintext: ");
+  for (auto byte : pdata) {
+    printf("%x", byte);
+  }
+  printf("\n");
 
   return 0;
 }

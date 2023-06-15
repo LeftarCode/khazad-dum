@@ -32,9 +32,6 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
   ESYS_TR primaryHandle = ESYS_TR_NONE;
 
   TPM2B_PUBLIC *outPublic = nullptr;
-  TPM2B_CREATION_DATA *creationData = nullptr;
-  TPM2B_DIGEST *creationHash = nullptr;
-  TPMT_TK_CREATION *creationTicket = nullptr;
 
   TPM2B_AUTH authValuePrimary = {.size = 5, .buffer = {1, 2, 3, 4, 5}};
 
@@ -83,13 +80,11 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
     throw TPM2Exception("Could not create primary object.");
   }
 
-  Esys_Free(outPublic);
-  Esys_Free(creationData);
-  Esys_Free(creationHash);
-  Esys_Free(creationTicket);
-
   std::array<std::byte, 256> key;
   memcpy(std::begin(key), outPublic->publicArea.unique.rsa.buffer, 256);
+
+  Esys_Free(outPublic);
+
   return std::make_unique<PrimaryObject>(primaryHandle, key);
 };
 
@@ -119,7 +114,7 @@ std::unique_ptr<CryptKey> TPM2_HAL::createKey(
 
   inSensitive.sensitive.userAuth = authKey;
 
-  TPM2B_PUBLIC inPublic = kPrimaryDefaultRSA;
+  TPM2B_PUBLIC inPublic = kKeyDefaultRSA;
   TPM2B_DATA outsideInfo = {
       .size = 0,
       .buffer = {},
@@ -137,29 +132,43 @@ std::unique_ptr<CryptKey> TPM2_HAL::createKey(
     throw TPM2Exception("Could not create key.");
   }
 
+  std::array<std::byte, 256> publicKey;
+  std::array<std::byte, 196> encryptedPrivateKey;
+  memcpy(std::begin(publicKey), outPublic->publicArea.unique.rsa.buffer, 256);
+  memcpy(std::begin(encryptedPrivateKey), outPrivate->buffer, 196);
+
   Esys_Free(outPublic);
   Esys_Free(creationData);
   Esys_Free(creationHash);
   Esys_Free(creationTicket);
 
-  std::array<std::byte, 256> publicKey;
-  std::array<std::byte, 228> ecnryptedPrivateKey;
-  memcpy(std::begin(publicKey), outPublic->publicArea.unique.rsa.buffer, 256);
-  memcpy(std::begin(ecnryptedPrivateKey), outPrivate->buffer, 228);
   return std::make_unique<CryptKey>(pPrimaryObject->getHandle(), publicKey,
-                                    ecnryptedPrivateKey);
+                                    encryptedPrivateKey);
 };
 
 std::vector<std::byte> TPM2_HAL::encrypt(
     const std::unique_ptr<CryptKey> &pKey) {
   TSS2_RC r;
-  TPM2B_MAX_BUFFER *outData = nullptr;
+
+  TPM2B_PUBLIC *outPublic = NULL;
+  TPM2B_PUBLIC_KEY_RSA *cipher = NULL;
 
   TPM2B_AUTH authKey = {.size = 6, .buffer = {6, 7, 8, 9, 10, 11}};
 
   TPM2B_PUBLIC inPublic = kPrimaryDefaultRSA;
-  inPublic.publicArea.unique.rsa.size = pKey->getPublicKey().size();
-  memcpy(inPublic.publicArea.unique.rsa.buffer,
+
+  TPM2B_DATA outsideInfo = {
+      .size = 0,
+      .buffer = {},
+  };
+
+  TPML_PCR_SELECTION creationPCR = {
+      .count = 0,
+  };
+
+  TPM2B_PUBLIC inPublic2 = kKeyDefaultRSA;
+  inPublic2.publicArea.unique.rsa.size = pKey->getPublicKey().size();
+  memcpy(inPublic2.publicArea.unique.rsa.buffer,
          std::begin(pKey->getPublicKey()), pKey->getPublicKey().size());
   TPM2B_PRIVATE inPrivateRSA;
   inPrivateRSA.size = pKey->getEncryptedPrivateKey().size();
@@ -168,36 +177,25 @@ std::vector<std::byte> TPM2_HAL::encrypt(
 
   ESYS_TR loadedKeyHandle = ESYS_TR_NONE;
   r = Esys_Load(ctx, pKey->getParentHandle(), ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                ESYS_TR_NONE, &inPrivateRSA, &inPublic, &loadedKeyHandle);
+                ESYS_TR_NONE, &inPrivateRSA, &inPublic2, &loadedKeyHandle);
   if (r != TSS2_RC_SUCCESS) {
     throw TPM2Exception("Could not load provided key");
   }
 
   r = Esys_TR_SetAuth(ctx, loadedKeyHandle, &authKey);
   if (r != TSS2_RC_SUCCESS) {
-    throw TPM2Exception("Could not authorize to provided key.");
+    throw TPM2Exception("Could not authorize to provieded key");
   }
 
-  TPM2B_PUBLIC_KEY_RSA plain = {.size = 3, .buffer = {1, 2, 3}};
-  TPM2B_PUBLIC_KEY_RSA *cipher = NULL;
-  TPM2B_PUBLIC_KEY_RSA *plain2 = NULL;
-  TPM2B_DATA *null_data = NULL;
-
+  size_t plain_size = 3;
+  TPM2B_PUBLIC_KEY_RSA plain = {.size = plain_size, .buffer = {1, 2, 3}};
   TPMT_RSA_DECRYPT scheme;
-  scheme.scheme = TPM2_ALG_NULL;
+  scheme.scheme = TPM2_ALG_RSAES;
 
   r = Esys_RSA_Encrypt(ctx, loadedKeyHandle, ESYS_TR_NONE, ESYS_TR_NONE,
-                       ESYS_TR_NONE, &plain, &scheme, null_data, &cipher);
+                       ESYS_TR_NONE, &plain, &scheme, nullptr, &cipher);
   if (r != TSS2_RC_SUCCESS) {
-    throw TPM2Exception("Could not encrypt data with provided key");
-  }
-
-  Esys_Free(null_data);
-
-  r = Esys_RSA_Decrypt(ctx, loadedKeyHandle, ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                       ESYS_TR_NONE, cipher, &scheme, null_data, &plain2);
-  if (r != TSS2_RC_SUCCESS) {
-    throw TPM2Exception("Could not decrypt data with provided key");
+    throw TPM2Exception("Could not encrypt data using provieded key");
   }
 
   std::vector<std::byte> ciphertext;
@@ -210,13 +208,30 @@ std::vector<std::byte> TPM2_HAL::decrypt(
     const std::unique_ptr<CryptKey> &pKey,
     const std::vector<std::byte> &ciphertext) {
   TSS2_RC r;
-  TPM2B_MAX_BUFFER *outData = nullptr;
+
+  TPM2B_PUBLIC *outPublic = NULL;
+  TPM2B_PUBLIC_KEY_RSA cipher;
+  TPM2B_PUBLIC_KEY_RSA *plain = NULL;
+
+  cipher.size = ciphertext.size();
+  memcpy(cipher.buffer, ciphertext.data(), ciphertext.size());
 
   TPM2B_AUTH authKey = {.size = 6, .buffer = {6, 7, 8, 9, 10, 11}};
 
   TPM2B_PUBLIC inPublic = kPrimaryDefaultRSA;
-  inPublic.publicArea.unique.rsa.size = pKey->getPublicKey().size();
-  memcpy(inPublic.publicArea.unique.rsa.buffer,
+
+  TPM2B_DATA outsideInfo = {
+      .size = 0,
+      .buffer = {},
+  };
+
+  TPML_PCR_SELECTION creationPCR = {
+      .count = 0,
+  };
+
+  TPM2B_PUBLIC inPublic2 = kKeyDefaultRSA;
+  inPublic2.publicArea.unique.rsa.size = pKey->getPublicKey().size();
+  memcpy(inPublic2.publicArea.unique.rsa.buffer,
          std::begin(pKey->getPublicKey()), pKey->getPublicKey().size());
   TPM2B_PRIVATE inPrivateRSA;
   inPrivateRSA.size = pKey->getEncryptedPrivateKey().size();
@@ -225,29 +240,23 @@ std::vector<std::byte> TPM2_HAL::decrypt(
 
   ESYS_TR loadedKeyHandle = ESYS_TR_NONE;
   r = Esys_Load(ctx, pKey->getParentHandle(), ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                ESYS_TR_NONE, &inPrivateRSA, &inPublic, &loadedKeyHandle);
+                ESYS_TR_NONE, &inPrivateRSA, &inPublic2, &loadedKeyHandle);
   if (r != TSS2_RC_SUCCESS) {
     throw TPM2Exception("Could not load provided key");
   }
 
   r = Esys_TR_SetAuth(ctx, loadedKeyHandle, &authKey);
   if (r != TSS2_RC_SUCCESS) {
-    throw TPM2Exception("Could not authorize to provided key.");
+    throw TPM2Exception("Could not authorize to provieded key");
   }
 
-  TPM2B_DATA *null_data = nullptr;
-  TPM2B_PUBLIC_KEY_RSA *plain = nullptr;
-  TPM2B_PUBLIC_KEY_RSA cipher;
-  cipher.size = ciphertext.size();
-  memcpy(cipher.buffer, ciphertext.data(), ciphertext.size());
-
   TPMT_RSA_DECRYPT scheme;
-  scheme.scheme = TPM2_ALG_NULL;
+  scheme.scheme = TPM2_ALG_RSAES;
 
   r = Esys_RSA_Decrypt(ctx, loadedKeyHandle, ESYS_TR_PASSWORD, ESYS_TR_NONE,
-                       ESYS_TR_NONE, &cipher, &scheme, null_data, &plain);
+                       ESYS_TR_NONE, &cipher, &scheme, nullptr, &plain);
   if (r != TSS2_RC_SUCCESS) {
-    throw TPM2Exception("Could not decrypt data with provided key");
+    throw TPM2Exception("Could not decrypt data using provieded key");
   }
 
   std::vector<std::byte> plaintext;
