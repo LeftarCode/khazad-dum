@@ -89,4 +89,27 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
 
   return std::make_unique<PrimaryObject>(primaryHandle, x, y);
 };
+
+std::array<std::byte, 32> TPM2_HAL::generateSharedKey(
+    const std::unique_ptr<PrimaryObject> &primaryKey,
+    const TPM2B_ECC_POINT &inPoint) {
+  TPM2B_ECC_POINT *zPoint = NULL;
+  TSS2_RC r = Esys_ECDH_ZGen(ctx, primaryKey->getHandle(), ESYS_TR_PASSWORD,
+                             ESYS_TR_NONE, ESYS_TR_NONE, &inPoint, &zPoint);
+
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not generate shared key (ECDH).");
+  }
+
+  std::array<std::byte, 32> secret;
+  SHA256_CTX sha256;
+  SHA256_Init(&sha256);
+  SHA256_Update(&sha256, zPoint->point.x.buffer, 32);
+  SHA256_Update(&sha256, zPoint->point.y.buffer, 32);
+  SHA256_Final((unsigned char *)secret.begin(), &sha256);
+
+  Esys_Free(zPoint);
+
+  return secret;
+}
 };  // namespace Moria

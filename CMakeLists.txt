@@ -24,4 +24,11 @@ target_link_libraries(khazad_dum
     nlohmann_json::nlohmann_json
 )
 
+find_package(OpenSSL REQUIRED)
+if (OPENSSL_FOUND)
+    target_link_libraries(khazad_dum OpenSSL::SSL)
+else() 
+    message (FATAL_ERROR "OpenSSL Not found.")
+endif()
+
 target_compile_features(khazad_dum PRIVATE cxx_std_17)

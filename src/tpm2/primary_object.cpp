@@ -24,7 +24,7 @@ nlohmann::json PrimaryObject::serialize() {
   }
 
   nlohmann::json keyJSON = {
-      {"pub_key", {"x", xStream.str(), "y", yStream.str()}},
+      {"pub_key", {{"x", xStream.str()}, {"y", yStream.str()}}},
   };
 
   return keyJSON;
