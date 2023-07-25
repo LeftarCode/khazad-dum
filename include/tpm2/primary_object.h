@@ -9,11 +9,13 @@ namespace Moria {
 class PrimaryObject {
  private:
   ESYS_TR handle;
-  std::array<std::byte, 256> key;
+  std::array<std::byte, 32> x, y;
 
  public:
-  PrimaryObject(ESYS_TR handle, std::array<std::byte, 256> key);
-  std::array<std::byte, 256> getKey();
+  PrimaryObject(ESYS_TR handle, std::array<std::byte, 32> x,
+                std::array<std::byte, 32> y);
+  std::array<std::byte, 32> getX();
+  std::array<std::byte, 32> getY();
   nlohmann::json serialize();
   ESYS_TR getHandle();
 };

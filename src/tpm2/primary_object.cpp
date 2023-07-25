@@ -5,19 +5,26 @@
 #include <sstream>
 
 namespace Moria {
-PrimaryObject::PrimaryObject(ESYS_TR handle, std::array<std::byte, 256> key)
-    : key(key), handle(handle) {}
-std::array<std::byte, 256> PrimaryObject::getKey() { return key; }
+PrimaryObject::PrimaryObject(ESYS_TR handle, std::array<std::byte, 32> x,
+                             std::array<std::byte, 32> y)
+    : x(x), y(y), handle(handle) {}
+std::array<std::byte, 32> PrimaryObject::getX() { return x; }
+std::array<std::byte, 32> PrimaryObject::getY() { return y; }
 
 nlohmann::json PrimaryObject::serialize() {
-  std::ostringstream keyStream;
-  for (auto byte : key) {
-    keyStream << std::setw(2) << std::setfill('0') << std::hex
-              << +static_cast<unsigned char>(byte);
+  std::ostringstream xStream;
+  std::ostringstream yStream;
+  for (auto byte : x) {
+    xStream << std::setw(2) << std::setfill('0') << std::hex
+            << +static_cast<unsigned char>(byte);
+  }
+  for (auto byte : y) {
+    yStream << std::setw(2) << std::setfill('0') << std::hex
+            << +static_cast<unsigned char>(byte);
   }
 
   nlohmann::json keyJSON = {
-      {"pub_key", keyStream.str()},
+      {"pub_key", {"x", xStream.str(), "y", yStream.str()}},
   };
 
   return keyJSON;
