@@ -1,68 +1,114 @@
 #include <fstream>
 #include <iostream>
 
+#include "crypto/ec/ec_key_converter.h"
 #include "tpm2/tpm2_hal.h"
 #include "utils/macros.h"
 
 int main(int argc, char** argv) {
-  if (argc == 3) {
+  if (argc < 3) {
     std::cout << "You need to provide at least 2 arguments" << std::endl
               << "Use -h for help message" << std::endl;
     return 1;
   }
 
+  Moria::TPM2_HAL* tpm2hal = new Moria::TPM2_HAL;
+
   if (strcmp(argv[1], "create_policy") == 0) {
-    Moria::TPM2_HAL* tpm2hall = new Moria::TPM2_HAL;
-    auto pPrimaryObject = tpm2hall->createPrimaryObject();
+    auto pPrimaryObject = tpm2hal->createPrimaryObject();
+    std::ofstream policyOutputFile;
 
     nlohmann::json object = {
-        {"ecc_primary_object", pPrimaryObject->serialize()}};
+        {"tpm_ecc_public_key", pPrimaryObject->serialize()}};
 
-    std::ofstream policyOutputFile;
     policyOutputFile.open(argv[2]);
-    if (policyOutputFile.is_open()) {
-      policyOutputFile << object.dump(2) << std::endl;
+    if (!policyOutputFile.is_open()) {
+      std::cout << "Could not open specified file" << std::endl;
+      return 1;
     }
+    policyOutputFile << object.dump(2) << std::endl;
   } else if (strcmp(argv[1], "seal_secrets") == 0) {
-    if (argc == 4) {
-      std::cout << "You need to provide exactly 3 arguments" << std::endl
+    if (argc != 5) {
+      std::cout << "You need to provide exactly 4 arguments" << std::endl
                 << "Use -h for help message" << std::endl;
       return 1;
     }
 
-    std::cout << "seal_secrets" << std::endl;
+    std::ifstream policyInputFile(argv[2]);
+    if (!policyInputFile.is_open()) {
+      std::cout << "Could not open specified policy file" << std::endl;
+      return 1;
+    }
+    nlohmann::json policyJson = nlohmann::json::parse(policyInputFile);
+    std::string x = policyJson["tpm_ecc_public_key"]["pub_key"]["x"];
+    std::string y = policyJson["tpm_ecc_public_key"]["pub_key"]["y"];
+
+    std::ifstream secretsInputFile(argv[3]);
+    if (!secretsInputFile.is_open()) {
+      std::cout << "Could not open specified secrets file" << std::endl;
+      return 1;
+    }
+    nlohmann::json secretsJson = nlohmann::json::parse(secretsInputFile);
+
+    std::ifstream privateKeyInputFile(argv[4]);
+    if (!privateKeyInputFile.is_open()) {
+      std::cout << "Could not open specified private key file" << std::endl;
+      return 1;
+    }
+
+    std::string privateKey(
+        (std::istreambuf_iterator<char>(privateKeyInputFile)),
+        std::istreambuf_iterator<char>());
+
+    Moria::ECKeyConverter ecKeyConverter;
+    Moria::ECPublicKeyPoint tpmPublicKeyPoint =
+        ecKeyConverter.converHexStringToPoint(x, y);
+    auto ecdhSecret =
+        ecKeyConverter.generateSharedKey(privateKey, tpmPublicKeyPoint);
   } else {
     std::cout << "Invalid program usage" << std::endl
               << "Use -h for help message" << std::endl;
     return 1;
   }
 
-  // TPM2B_ECC_POINT inPoint = {
-  //     .size = 0,
-  //     .point = {
-  //         .x =
-  //             {
-  //                 .size = 32,
-  //                 .buffer = {0x25, 0xdb, 0x1f, 0x8b, 0xbc, 0xfa, 0xbc, 0x31,
-  //                            0xf8, 0x17, 0x6a, 0xcb, 0xb2, 0xf8, 0x40, 0xa3,
-  //                            0xb6, 0xa5, 0xd3, 0x40, 0x65, 0x9d, 0x37, 0xee,
-  //                            0xd9, 0xfd, 0x52, 0x47, 0xf5, 0x14, 0xd5, 0x98},
-  //             },
-  //         .y = {.size = 32,
-  //               .buffer = {0xed, 0x62, 0x3e, 0x3d, 0xd2, 0x09, 0x08, 0xcf,
-  //                          0x58, 0x3c, 0x81, 0x4b, 0xbf, 0x65, 0x7e, 0x08,
-  //                          0xab, 0x9f, 0x40, 0xff, 0xea, 0x51, 0xda, 0x21,
-  //                          0x29, 0x8c, 0xe2, 0x4d, 0xeb, 0x34, 0x4c,
-  //                          0xcc}}}};
-  // auto secret = tpm2hall->generateSharedKey(pPrimaryObject, inPoint);
+  // Moria::ECKeyConverter ecKeyConverter;
+  // Moria::ECPublicKeyPoint remotePublicKeyPoint =
+  //     ecKeyConverter.convertPEMToPoint(privateKey);
+  // /* START TEST */
+  // /* TEST TPM2 CALC */
+  // TPM2B_ECC_POINT inPoint = {.size = 0,
+  //                            .point = {.x =
+  //                                          {
+  //                                              .size = 32,
+  //                                          },
+  //                                      .y = {.size = 32}}};
 
-  // std::ostringstream yStream;
-  // for (auto byte : secret) {
-  //   yStream << std::setw(2) << std::setfill('0') << std::hex
-  //           << +static_cast<unsigned char>(byte);
+  // memcpy(inPoint.point.x.buffer, std::begin(remotePublicKeyPoint.first), 32);
+  // memcpy(inPoint.point.y.buffer, std::begin(remotePublicKeyPoint.second),
+  // 32);
+
+  // auto pPrimaryObject = tpm2hal->createPrimaryObject();
+  // auto secretTPM = tpm2hal->generateSharedKey(pPrimaryObject, inPoint);
+  // /* TEST OPENSSL CALC */
+  // // Zmienic na punkt z JSONa
+  // Moria::ECPublicKeyPoint tpmPublicKeyPoint =
+  //     ecKeyConverter.converHexStringToPoint(x, y);
+  // auto secretOSSL =
+  //     ecKeyConverter.generateSharedKey(privateKey, tpmPublicKeyPoint);
+  // /* END TEST */
+
+  // std::ostringstream secretTPMSTR;
+  // std::ostringstream secretOSSLSTR;
+  // for (auto byte : secretTPM) {
+  //   secretTPMSTR << std::setw(2) << std::setfill('0') << std::hex
+  //                << +static_cast<unsigned char>(byte);
   // }
-
-  // std::cout << "AES Key: " << yStream.str() << std::endl;
+  // for (auto byte : secretOSSL) {
+  //   secretOSSLSTR << std::setw(2) << std::setfill('0') << std::hex
+  //                 << +static_cast<unsigned char>(byte);
+  // }
+  // std::cout << "TPM2: " << secretTPMSTR.str() << std::endl;
+  // std::cout << "OSSL: " << secretOSSLSTR.str() << std::endl;
 
   return 0;
 }

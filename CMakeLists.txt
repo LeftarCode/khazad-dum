@@ -8,6 +8,7 @@ add_executable (khazad_dum
     "src/tpm2/primary_object.cpp"
     "src/tpm2/crypt_key.cpp"
     "src/tpm2/tpm2_hal.cpp"
+    "src/crypto/ec/ec_key_converter.cpp"
 )
 
 include_directories (

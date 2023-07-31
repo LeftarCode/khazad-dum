@@ -102,11 +102,7 @@ std::array<std::byte, 32> TPM2_HAL::generateSharedKey(
   }
 
   std::array<std::byte, 32> secret;
-  SHA256_CTX sha256;
-  SHA256_Init(&sha256);
-  SHA256_Update(&sha256, zPoint->point.x.buffer, 32);
-  SHA256_Update(&sha256, zPoint->point.y.buffer, 32);
-  SHA256_Final((unsigned char *)secret.begin(), &sha256);
+  memcpy(std::begin(secret), zPoint->point.x.buffer, 32);
 
   Esys_Free(zPoint);
 
