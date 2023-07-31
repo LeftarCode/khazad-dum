@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "crypto/ec/ec_key_converter.h"
+#include "crypto/symmetric/aes_processor.h"
 #include "tpm2/tpm2_hal.h"
 #include "utils/macros.h"
 
@@ -65,6 +66,39 @@ int main(int argc, char** argv) {
         ecKeyConverter.converHexStringToPoint(x, y);
     auto ecdhSecret =
         ecKeyConverter.generateSharedKey(privateKey, tpmPublicKeyPoint);
+
+    Moria::AESProcessor aesProcessor(Moria::kAES256GCM, ecdhSecret);
+    auto iv = aesProcessor.generateInitialVector();
+
+    auto secretsElement = secretsJson["secrets"];
+    for (auto& secret : secretsElement.items()) {
+      secretsElement[secret.key()] = aesProcessor.encrypt(secret.value(), iv);
+    }
+
+    std::ostringstream ivStringStream;
+    for (auto byte : iv) {
+      ivStringStream << std::setw(2) << std::setfill('0') << std::hex
+                     << +static_cast<unsigned char>(byte);
+    }
+    std::ostringstream xStringStream;
+    for (auto byte : iv) {
+      xStringStream << std::setw(2) << std::setfill('0') << std::hex
+                    << +static_cast<unsigned char>(byte);
+    }
+    std::ostringstream yStringStream;
+    for (auto byte : iv) {
+      yStringStream << std::setw(2) << std::setfill('0') << std::hex
+                    << +static_cast<unsigned char>(byte);
+    }
+
+    nlohmann::json devPublicKeyJSON = {{"x", "PUT_DEV_X"}, {"y", "PUT_DEV_Y"}};
+
+    nlohmann::json object = {
+        {"tpm_ecc_public_key", policyJson["tpm_ecc_public_key"]},
+        {"dev_ecc_public_key", devPublicKeyJSON},
+        {"secrets", secretsElement},
+        {"iv", ivStringStream.str()}};
+    std::cout << object.dump(2) << std::endl;
   } else {
     std::cout << "Invalid program usage" << std::endl
               << "Use -h for help message" << std::endl;

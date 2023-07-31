@@ -6,6 +6,7 @@
 
 #include "./crypt_key.h"
 #include "./primary_object.h"
+#include "utils/type_defs.h"
 
 namespace Moria {
 class TPM2_HAL {
@@ -18,7 +19,7 @@ class TPM2_HAL {
   std::unique_ptr<PrimaryObject> createPrimaryObject();
   std::unique_ptr<CryptKey> createKey(
       std::unique_ptr<PrimaryObject> pPrimaryObject);
-  std::array<std::byte, 32> generateSharedKey(
+  ECPointCoord generateSharedKey(
       const std::unique_ptr<PrimaryObject>& primaryKey,
       const TPM2B_ECC_POINT& inPoint);
 };

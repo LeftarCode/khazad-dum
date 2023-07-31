@@ -80,9 +80,9 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
     throw TPM2Exception("Could not create primary object.");
   }
 
-  std::array<std::byte, 32> x;
+  ECPointCoord x;
   memcpy(std::begin(x), outPublic->publicArea.unique.ecc.x.buffer, 32);
-  std::array<std::byte, 32> y;
+  ECPointCoord y;
   memcpy(std::begin(y), outPublic->publicArea.unique.ecc.y.buffer, 32);
 
   Esys_Free(outPublic);
@@ -90,7 +90,7 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
   return std::make_unique<PrimaryObject>(primaryHandle, x, y);
 };
 
-std::array<std::byte, 32> TPM2_HAL::generateSharedKey(
+ECPointCoord TPM2_HAL::generateSharedKey(
     const std::unique_ptr<PrimaryObject> &primaryKey,
     const TPM2B_ECC_POINT &inPoint) {
   TPM2B_ECC_POINT *zPoint = NULL;
@@ -101,7 +101,7 @@ std::array<std::byte, 32> TPM2_HAL::generateSharedKey(
     throw TPM2Exception("Could not generate shared key (ECDH).");
   }
 
-  std::array<std::byte, 32> secret;
+  ECPointCoord secret;
   memcpy(std::begin(secret), zPoint->point.x.buffer, 32);
 
   Esys_Free(zPoint);

@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <nlohmann/json.hpp>
 
+#include "utils/type_defs.h"
+
 namespace Moria {
 class PrimaryObject {
  private:
@@ -12,10 +14,9 @@ class PrimaryObject {
   std::array<std::byte, 32> x, y;
 
  public:
-  PrimaryObject(ESYS_TR handle, std::array<std::byte, 32> x,
-                std::array<std::byte, 32> y);
-  std::array<std::byte, 32> getX();
-  std::array<std::byte, 32> getY();
+  PrimaryObject(ESYS_TR handle, ECPointCoord x, ECPointCoord y);
+  ECPointCoord getX();
+  ECPointCoord getY();
   nlohmann::json serialize();
   ESYS_TR getHandle();
 };

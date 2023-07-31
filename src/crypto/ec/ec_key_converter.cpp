@@ -7,8 +7,8 @@
 
 namespace Moria {
 ECPublicKeyPoint ECKeyConverter::convertPEMToPoint(const std::string& pem) {
-  std::array<std::byte, 32> x;
-  std::array<std::byte, 32> y;
+  ECPointCoord x;
+  ECPointCoord y;
 
   BIO* bio = BIO_new_mem_buf(pem.c_str(), pem.size());
 
@@ -41,11 +41,8 @@ ECPublicKeyPoint ECKeyConverter::convertPEMToPoint(const std::string& pem) {
   return std::make_pair(x, y);
 }
 
-std::array<std::byte, 32> ECKeyConverter::generateSharedKey(
-    const std::string& pem, ECPublicKeyPoint inPoint) {
-  std::array<std::byte, 32> x;
-  std::array<std::byte, 32> y;
-
+ECDHSecret ECKeyConverter::generateSharedKey(const std::string& pem,
+                                             ECPublicKeyPoint inPoint) {
   BIO* bio = BIO_new_mem_buf(pem.c_str(), pem.size());
 
   EVP_PKEY* privateKey = PEM_read_bio_PrivateKey(bio, NULL, 0, NULL);
@@ -70,7 +67,7 @@ std::array<std::byte, 32> ECKeyConverter::generateSharedKey(
     exit(1);
   }
 
-  std::array<std::byte, 32> secret;
+  ECDHSecret secret;
   int sharedLen = ECDH_compute_key((unsigned char*)std::begin(secret), 32,
                                    ecPoint, ecPrivateKey, NULL);
 
@@ -84,8 +81,8 @@ std::array<std::byte, 32> ECKeyConverter::generateSharedKey(
 
 ECPublicKeyPoint ECKeyConverter::converHexStringToPoint(
     const std::string& xHex, const std::string& yHex) {
-  std::array<std::byte, 32> x;
-  std::array<std::byte, 32> y;
+  ECPointCoord x;
+  ECPointCoord y;
   BIGNUM* input = BN_new();
 
   int input_length = (BN_hex2bn(&input, xHex.c_str()) + 1) / 2;

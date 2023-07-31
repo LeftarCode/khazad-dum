@@ -5,11 +5,10 @@
 #include <sstream>
 
 namespace Moria {
-PrimaryObject::PrimaryObject(ESYS_TR handle, std::array<std::byte, 32> x,
-                             std::array<std::byte, 32> y)
+PrimaryObject::PrimaryObject(ESYS_TR handle, ECPointCoord x, ECPointCoord y)
     : x(x), y(y), handle(handle) {}
-std::array<std::byte, 32> PrimaryObject::getX() { return x; }
-std::array<std::byte, 32> PrimaryObject::getY() { return y; }
+ECPointCoord PrimaryObject::getX() { return x; }
+ECPointCoord PrimaryObject::getY() { return y; }
 
 nlohmann::json PrimaryObject::serialize() {
   std::ostringstream xStream;
