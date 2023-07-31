@@ -1,1 +1,6 @@
 build
+policy.json
+secrets.json
+privkey.pem
+pubkey.pem
+keypair.pem

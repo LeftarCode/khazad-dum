@@ -17,3 +17,28 @@ cmake -S . -B build
 cmake --build build --config Release
 cmake --build build --config Debug
 ```
+
+## Usage
+- Create sealing policy (on target machine):
+```
+./khazad-dum create_policy <filename>.json
+```
+- Create private key (on your machine, using OpenSSL):
+```
+openssl ecparam -name prime256v1 -genkey -noout -out privkey.pem
+```
+- Seal secrets (on your machine):
+```
+./khazad-dum seal_secrets <policy>.json <secrets>.json <privkey>.pem
+```
+
+### Secrets format
+Below you can find example secret input:
+```
+{
+    "secrets": {
+        "DB_USERNAME": "username",
+        "DB_PASSWORD": "password"
+    }
+}
+```
