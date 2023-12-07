@@ -36,6 +36,7 @@ class KhazadDum {
                       std::string secretsInputFilename,
                       std::string privateKeyInputFilename);
   std::vector<Secret> decryptSecrets(std::string policyInputFilename);
-  std::vector<> sealSecrets(std::vector<Secret> secrets);
+  std::vector<std::map<std::string, ESYS_TR>> sealSecrets(
+      std::vector<Secret> secrets);
 };
 };  // namespace Moria
