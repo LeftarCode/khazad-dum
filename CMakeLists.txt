@@ -4,6 +4,7 @@ project ("khazad_dum")
 
 
 add_executable (khazad_dum 
+    "src/main.cpp"
     "src/khazad_dum.cpp"
     "src/tpm2/primary_object.cpp"
     "src/tpm2/crypt_key.cpp"

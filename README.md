@@ -27,9 +27,9 @@ cmake --build build --config Debug
 ```
 openssl ecparam -name prime256v1 -genkey -noout -out privkey.pem
 ```
-- Seal secrets (on your machine):
+- Encrypt secrets (on your machine):
 ```
-./khazad-dum seal_secrets <policy>.json <secrets>.json <privkey>.pem
+./khazad-dum encrypt_secrets <policy>.json <secrets>.json <privkey>.pem
 ```
 
 ### Secrets format
