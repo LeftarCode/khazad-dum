@@ -11,6 +11,7 @@ namespace Moria {
 
 class KhazadDum {
   TPM2_HAL* tpm2hal = new TPM2_HAL;
+  std::unique_ptr<PrimaryObject> pPrimaryObject;
 
   std::string convertBytesVectorToHexString(const std::vector<std::byte>& v);
   std::string convert32BytesArrayToHexString(
@@ -29,11 +30,12 @@ class KhazadDum {
       const std::string& s);
 
  public:
+  KhazadDum();
   void createPolicy(std::string policyOutputFilename);
   void encryptSecrets(std::string policyInputFilename,
                       std::string secretsInputFilename,
                       std::string privateKeyInputFilename);
   std::vector<Secret> decryptSecrets(std::string policyInputFilename);
-  void sealSecrets(std::vector<Secret> secrets);
+  std::vector<> sealSecrets(std::vector<Secret> secrets);
 };
 };  // namespace Moria

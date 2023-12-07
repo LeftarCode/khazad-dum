@@ -20,4 +20,10 @@ class Secret {
   std::string name;
   std::string value;
 };
+
+class SealedSecret {
+ public:
+  std::string name;
+  std::string value;
+};
 }  // namespace Moria

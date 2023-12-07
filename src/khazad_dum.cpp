@@ -95,8 +95,9 @@ std::array<std::byte, 12> KhazadDum::convertHexStringTo12BytesArray(
   return a;
 }
 
+KhazadDum::KhazadDum() { pPrimaryObject = tpm2hal->createPrimaryObject(); }
+
 void KhazadDum::createPolicy(std::string policyOutputFilename) {
-  auto pPrimaryObject = tpm2hal->createPrimaryObject();
   std::ofstream policyOutputFile;
 
   nlohmann::json object = {{"tpm_ecc_key", pPrimaryObject->serialize()}};
@@ -197,7 +198,6 @@ std::vector<Secret> KhazadDum::decryptSecrets(std::string policyInputFilename) {
   memcpy(inPoint.point.x.buffer, std::begin(devPublicKeyPoint.first), 32);
   memcpy(inPoint.point.y.buffer, std::begin(devPublicKeyPoint.second), 32);
 
-  auto pPrimaryObject = tpm2hal->createPrimaryObject();
   auto secretTPM = tpm2hal->generateSharedKey(pPrimaryObject, inPoint);
 
   AESProcessor aesProcessor(kAES256GCM, secretTPM);
