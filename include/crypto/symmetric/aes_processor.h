@@ -4,6 +4,7 @@
 
 #include <array>
 #include <string>
+#include <vector>
 
 #include "utils/type_defs.h"
 
@@ -12,14 +13,14 @@ enum SymmetricEncryptionType { kAES256GCM };
 
 class AESProcessor {
   SymmetricEncryptionType type;
-  EVP_CIPHER_CTX *ctx;
+  EVP_CIPHER_CTX* ctx;
   ECPointCoord key;
 
  public:
   AESProcessor(SymmetricEncryptionType type, ECPointCoord key);
   ~AESProcessor();
   std::array<std::byte, 12> generateInitialVector();
-  std::string encrypt(std::string cleartext, std::array<std::byte, 12> iv);
-  std::string decrypt(std::string ciphertext, std::array<std::byte, 12> iv);
+  EncryptedSecret encryptSecret(const Secret& secret);
+  Secret decryptSecret(const EncryptedSecret& encryptedSecret);
 };
 }  // namespace Moria

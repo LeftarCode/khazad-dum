@@ -8,14 +8,31 @@
 #include "utils/macros.h"
 
 namespace Moria {
+
 class KhazadDum {
   Moria::TPM2_HAL* tpm2hal = new Moria::TPM2_HAL;
+
+  std::string convertBytesVectorToHexString(const std::vector<std::byte>& v);
+  std::string convert32BytesArrayToHexString(
+      const std::array<std::byte, 32>& a);
+  std::string convert16BytesArrayToHexString(
+      const std::array<std::byte, 16>& a);
+  std::string convert12BytesArrayToHexString(
+      const std::array<std::byte, 12>& a);
+
+  std::vector<std::byte> convertHexStringToBytesVector(const std::string& s);
+  std::array<std::byte, 32> convertHexStringTo32BytesArray(
+      const std::string& s);
+  std::array<std::byte, 16> convertHexStringTo16BytesArray(
+      const std::string& s);
+  std::array<std::byte, 12> convertHexStringTo12BytesArray(
+      const std::string& s);
 
  public:
   void createPolicy(std::string policyOutputFilename);
   void encryptSecrets(std::string policyInputFilename,
                       std::string secretsInputFilename,
                       std::string privateKeyInputFilename);
-  void decryptSecrets(std::string policyInputFilename);
+  std::vector<Secret> decryptSecrets(std::string policyInputFilename);
 };
 };  // namespace Moria
