@@ -138,13 +138,13 @@ void KhazadDum::encryptSecrets(std::string policyInputFilename,
   std::string privateKey((std::istreambuf_iterator<char>(privateKeyInputFile)),
                          std::istreambuf_iterator<char>());
 
-  Moria::ECKeyConverter ecKeyConverter;
-  Moria::ECPublicKeyPoint tpmPublicKeyPoint =
+  ECKeyConverter ecKeyConverter;
+  ECPublicKeyPoint tpmPublicKeyPoint =
       ecKeyConverter.converHexStringToPoint(x, y);
   auto ecdhSecret =
       ecKeyConverter.generateSharedKey(privateKey, tpmPublicKeyPoint);
 
-  Moria::AESProcessor aesProcessor(Moria::kAES256GCM, ecdhSecret);
+  AESProcessor aesProcessor(Moria::kAES256GCM, ecdhSecret);
 
   auto secretsElement = secretsJson["secrets"];
   for (auto& secret : secretsElement.items()) {
@@ -187,8 +187,8 @@ std::vector<Secret> KhazadDum::decryptSecrets(std::string policyInputFilename) {
   std::string x = devEccKey["x"];
   std::string y = devEccKey["y"];
 
-  Moria::ECKeyConverter ecKeyConverter;
-  Moria::ECPublicKeyPoint devPublicKeyPoint =
+  ECKeyConverter ecKeyConverter;
+  ECPublicKeyPoint devPublicKeyPoint =
       ecKeyConverter.converHexStringToPoint(x, y);
 
   TPM2B_ECC_POINT inPoint = {.size = 0,
@@ -200,7 +200,8 @@ std::vector<Secret> KhazadDum::decryptSecrets(std::string policyInputFilename) {
   auto pPrimaryObject = tpm2hal->createPrimaryObject();
   auto secretTPM = tpm2hal->generateSharedKey(pPrimaryObject, inPoint);
 
-  Moria::AESProcessor aesProcessor(Moria::kAES256GCM, secretTPM);
+  AESProcessor aesProcessor(kAES256GCM, secretTPM);
+  std::vector<Secret> secrets;
   for (const auto& secret : policyJson["secrets"].items()) {
     EncryptedSecret encryptedSecret;
     encryptedSecret.name = secret.key();
@@ -209,11 +210,9 @@ std::vector<Secret> KhazadDum::decryptSecrets(std::string policyInputFilename) {
     encryptedSecret.iv = convertHexStringTo12BytesArray(secret.value()["iv"]);
     encryptedSecret.tag = convertHexStringTo16BytesArray(secret.value()["tag"]);
 
-    Moria::Secret decryptedSecret = aesProcessor.decryptSecret(encryptedSecret);
-    std::cout << decryptedSecret.name << " : " << decryptedSecret.value
-              << std::endl;
+    secrets.push_back(aesProcessor.decryptSecret(encryptedSecret));
   }
 
-  return {};
+  return secrets;
 }
 };  // namespace Moria
