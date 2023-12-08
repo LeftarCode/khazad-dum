@@ -29,6 +29,17 @@ const TPM2B_PUBLIC kPrimaryDefaultEcc =
                             .y = {.size = 0, .buffer = {}}}},
      }};
 
+const TPM2B_PUBLIC kPrimaryDefaultSeal = {
+    .size = 0,
+    .publicArea = {
+        .type = TPM2_ALG_KEYEDHASH,
+        .nameAlg = TPM2_ALG_SHA256,
+        .objectAttributes = (TPMA_OBJECT_FIXEDTPM | TPMA_OBJECT_FIXEDPARENT),
+        .authPolicy = {.size = 0, .buffer = {}},
+        .parameters = {.keyedHashDetail = {.scheme = TPM2_ALG_NULL}},
+        .unique = {.keyedHash = {.size = 32}},
+    }};
+
 const TPM2B_PUBLIC kPrimaryDefaultRSA = {
     .size = 0,
     .publicArea =

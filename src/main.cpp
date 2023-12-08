@@ -13,7 +13,10 @@ int main(int argc, char** argv) {
   Moria::TPM2_HAL* tpm2hal = new Moria::TPM2_HAL;
   Moria::KhazadDum* khazadDum = new Moria::KhazadDum;
 
-  khazadDum->decryptSecrets("mithril.json");
+  // auto decryptedSecrets = khazadDum->decryptSecrets("mithril.json");
+  // auto sealedSecrets = khazadDum->sealSecrets(decryptedSecrets);
+  // auto secretValue = khazadDum->unsealSecret(sealedSecrets, "DB_PASSWORD");
+  // secretValue = khazadDum->unsealSecret(sealedSecrets, "DB_USERNAME");
 
   if (strcmp(argv[1], "create_policy") == 0) {
     khazadDum->createPolicy(argv[2]);

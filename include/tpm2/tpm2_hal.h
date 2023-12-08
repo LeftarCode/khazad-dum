@@ -16,12 +16,13 @@ class TPM2_HAL {
 
  public:
   TPM2_HAL();
-  std::unique_ptr<PrimaryObject> createPrimaryObject();
+  std::unique_ptr<PrimaryObject> createPrimaryObject(std::string data = "");
   std::unique_ptr<CryptKey> createKey(
       std::unique_ptr<PrimaryObject> pPrimaryObject);
   ECPointCoord generateSharedKey(
       const std::unique_ptr<PrimaryObject>& primaryKey,
       const TPM2B_ECC_POINT& inPoint);
+  std::string unsealSecret(const std::shared_ptr<PrimaryObject>& primaryKey);
 };
 
 };  // namespace Moria

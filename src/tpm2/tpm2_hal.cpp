@@ -9,6 +9,57 @@
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
+#define TSS2_ESYS_RC_GENERAL_FAILURE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_GENERAL_FAILURE))
+#define TSS2_ESYS_RC_NOT_IMPLEMENTED \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_NOT_IMPLEMENTED))
+#define TSS2_ESYS_RC_ABI_MISMATCH \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_ABI_MISMATCH))
+#define TSS2_ESYS_RC_BAD_REFERENCE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_BAD_REFERENCE))
+#define TSS2_ESYS_RC_INSUFFICIENT_BUFFER \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_INSUFFICIENT_BUFFER))
+#define TSS2_ESYS_RC_BAD_SEQUENCE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_BAD_SEQUENCE))
+#define TSS2_ESYS_RC_INVALID_SESSIONS \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_INVALID_SESSIONS))
+#define TSS2_ESYS_RC_TRY_AGAIN \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_TRY_AGAIN))
+#define TSS2_ESYS_RC_IO_ERROR \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_IO_ERROR))
+#define TSS2_ESYS_RC_BAD_VALUE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_BAD_VALUE))
+#define TSS2_ESYS_RC_NO_DECRYPT_PARAM \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_NO_DECRYPT_PARAM))
+#define TSS2_ESYS_RC_NO_ENCRYPT_PARAM \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_NO_ENCRYPT_PARAM))
+#define TSS2_ESYS_RC_BAD_SIZE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_BAD_SIZE))
+#define TSS2_ESYS_RC_MALFORMED_RESPONSE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_MALFORMED_RESPONSE))
+#define TSS2_ESYS_RC_INSUFFICIENT_CONTEXT \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_INSUFFICIENT_CONTEXT))
+#define TSS2_ESYS_RC_INSUFFICIENT_RESPONSE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_INSUFFICIENT_RESPONSE))
+#define TSS2_ESYS_RC_INCOMPATIBLE_TCTI \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_INCOMPATIBLE_TCTI))
+#define TSS2_ESYS_RC_BAD_TCTI_STRUCTURE \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_BAD_TCTI_STRUCTURE))
+#define TSS2_ESYS_RC_MEMORY \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_MEMORY))
+#define TSS2_ESYS_RC_BAD_TR \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_BAD_TR))
+#define TSS2_ESYS_RC_MULTIPLE_DECRYPT_SESSIONS \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_MULTIPLE_DECRYPT_SESSIONS))
+#define TSS2_ESYS_RC_MULTIPLE_ENCRYPT_SESSIONS \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_MULTIPLE_ENCRYPT_SESSIONS))
+#define TSS2_ESYS_RC_NOT_SUPPORTED \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_NOT_SUPPORTED))
+#define TSS2_ESYS_RC_RSP_AUTH_FAILED \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_RSP_AUTH_FAILED))
+#define TSS2_ESYS_RC_CALLBACK_NULL \
+  ((TSS2_RC)(TSS2_ESAPI_RC_LAYER | TSS2_BASE_RC_CALLBACK_NULL))
+
 namespace Moria {
 TPM2_HAL::TPM2_HAL() {
   TSS2_RC r;
@@ -27,23 +78,20 @@ TPM2_HAL::TPM2_HAL() {
   // }
 }
 
-std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
+std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject(std::string data) {
   TSS2_RC r;
   ESYS_TR primaryHandle = ESYS_TR_NONE;
-
   TPM2B_PUBLIC *outPublic = nullptr;
-
   TPM2B_AUTH authValuePrimary = {.size = 5, .buffer = {1, 2, 3, 4, 5}};
+
+  std::cout << "CREATE_PRIMARY_OBJECT: " << data << std::endl;
+
+  // EXCAPTION IF DATA.SIZE > 256
 
   TPM2B_SENSITIVE_CREATE inSensitivePrimary = {
       .size = 0,
       .sensitive =
           {
-              .userAuth =
-                  {
-                      .size = 0,
-                      .buffer = {0},
-                  },
               .data =
                   {
                       .size = 0,
@@ -53,8 +101,13 @@ std::unique_ptr<PrimaryObject> TPM2_HAL::createPrimaryObject() {
   };
 
   inSensitivePrimary.sensitive.userAuth = authValuePrimary;
+  inSensitivePrimary.sensitive.data.size = data.size();
+  memcpy(inSensitivePrimary.sensitive.data.buffer, data.c_str(), data.size());
 
   TPM2B_PUBLIC inPublic = kPrimaryDefaultEcc;
+  if (data.size() > 0) {
+    inPublic = kPrimaryDefaultSeal;
+  }
 
   TPM2B_DATA outsideInfo = {
       .size = 0,
@@ -107,5 +160,22 @@ ECDHSecret TPM2_HAL::generateSharedKey(
   Esys_Free(zPoint);
 
   return secret;
+}
+
+std::string TPM2_HAL::unsealSecret(
+    const std::shared_ptr<PrimaryObject> &primaryKey) {
+  TPM2B_SENSITIVE_DATA outSensitiveData = {
+      .size = 0,
+      .buffer = {0},
+  };
+  TPM2B_SENSITIVE_DATA *pOutSensitiveData = &outSensitiveData;
+
+  TSS2_RC r = Esys_Unseal(ctx, primaryKey->getHandle(), ESYS_TR_PASSWORD,
+                          ESYS_TR_NONE, ESYS_TR_NONE, &pOutSensitiveData);
+  if (r != TSS2_RC_SUCCESS) {
+    throw TPM2Exception("Could not unseal data!");
+  }
+
+  std::cout << outSensitiveData.buffer << std::endl;
 }
 };  // namespace Moria

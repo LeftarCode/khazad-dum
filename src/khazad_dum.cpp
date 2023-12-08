@@ -215,4 +215,28 @@ std::vector<Secret> KhazadDum::decryptSecrets(std::string policyInputFilename) {
 
   return secrets;
 }
+
+std::map<std::string, std::shared_ptr<PrimaryObject>> KhazadDum::sealSecrets(
+    std::vector<Secret> secrets) {
+  std::map<std::string, std::shared_ptr<PrimaryObject>> sealedSecrets;
+  for (auto& secret : secrets) {
+    auto sealedSecret = tpm2hal->createPrimaryObject(secret.value);
+    sealedSecrets.emplace(secret.name, std::move(sealedSecret));
+  }
+
+  return sealedSecrets;
+}
+
+std::string KhazadDum::unsealSecret(
+    std::map<std::string, std::shared_ptr<PrimaryObject>> sealedSecrets,
+    std::string secretName) {
+  std::shared_ptr<PrimaryObject> sealObject = sealedSecrets[secretName];
+  if (sealObject == nullptr) {
+    return "";
+  }
+
+  tpm2hal->unsealSecret(sealObject);
+
+  return "";
+}
 };  // namespace Moria
