@@ -43,3 +43,6 @@ Below you can find example secret input:
     }
 }
 ```
+## Publications
+**Idea behind Khazad-dum - a TPM2 secret manager!**
+- [https://pagedout.institute/download/PagedOut_003_beta1.pdf#page=32](https://pagedout.institute/download/PagedOut_003_beta1.pdf#page=32)
